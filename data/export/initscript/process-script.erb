@@ -30,7 +30,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 # Define LSB log_* functions.
 # Depend on lsb-base (>= 3.2-14) to ensure that this file is present
 # and status_of_proc is working.
-[ -r /lib/lsb/init-functions ] &&. /lib/lsb/init-functions
+[ -r /lib/lsb/init-functions ] && . /lib/lsb/init-functions
 
 #
 # Function that starts the daemon/service
@@ -39,6 +39,7 @@ do_start()
 {
     mkdir -p $PIDDIR
     exec su - <%= user %> -c 'cd <%= engine.root %>; export PORT=<%= port %>;<% engine.env.each_pair do |var,env| %> export <%= var.upcase %>=<%= shell_quote(env) %>; <% end %> <%= process.command %> >> <%= log %>/<%= app %>-<%= name %>-<%= num %>.log 2>&1 & echo $!' > $PIDDIR/<%= app %>-<%= name %>-<%= num %>.pid
+}
 
 #
 # Function that stops the daemon/service
