@@ -2,27 +2,33 @@ require "erb"
 require "foreman/export"
 
 class Foreman::Export::Initscript < Foreman::Export::Base
-
-  def export
-    error("Must specify a location") unless location
-
-    FileUtils.mkdir_p location
-
-    app = self.app || File.basename(engine.directory)
-    user = self.user || app
-    log_root = self.log || "/var/log/#{app}"
-    template_root = Pathname.new(File.dirname(__FILE__)).join('..', '..', '..', 'data', 'export', 'initscript').expand_path
-
-    Dir["#{location}/#{app}"].each do |file|
-      say "cleaning up: #{file}"
-      FileUtils.rm(file)
+    
+    def initialize(location, engine, options={})
+        newoptions = options.dup
+        newoptions[:template] = template_root
+        super(location, engine, newoptions)
     end
+    
+    def export
+        super
 
-    master_template = export_template("initscript", "master.erb", template_root)
-    master_config   = ERB.new(master_template).result(binding)
-    write_file "#{location}/#{app}", master_config
-
-   end
-
+        error("Must specify a location") unless location
+        
+        Dir["{location}/#{app}*"].each do |file|
+            clean file
+        end
+        
+        engine.each_process do |name, process|
+            1.upto(engine.formation[name]) do |num|
+                port = engine.port_for(process, num)
+                write_template "initscript/process-script.erb", "#{app}-#{name}-#{num}", binding
+            end
+        end
+    end
+    
+    private
+    def template_root
+        @template_root ||= File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'data', 'export', 'initscript'))
+    end
 end
 
