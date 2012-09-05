@@ -1,0 +1,110 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          <%= app %>-<%= name %>-<%= num %>
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Generated initscript for <%= app %>-<%= name %>-<%= num %>
+# Description:       This file starts <%= app %>-<%= name %>-<%= num %>. It should be placed in /etc/init.d
+### END INIT INFO
+
+# Author: Foreman generator
+#
+
+# Do NOT "set -e"
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+PROG=<%= app %>-<%= name %>-<%= num %>
+DESC="Runs $PROG"
+LOCKFILE=/var/lock/subsys/$PROG
+
+RETVAL=0
+PIDFILE=<%= File.join(pid_dir, process_name) %>.pid
+
+# Load initd helpers
+[ -e /etc/init.d/functions ] && . /etc/init.d/functions
+
+# Read default configuration variable file if it is present
+[ -r /etc/default/$PROG ] && . /etc/default/$PROG
+
+# Read preconfigured variable file if it is present
+[ -r /etc/sysconfig/$PROG ] && . /etc/sysconfig/$PROG
+ 
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    # prepare pid dir
+    mkdir -p <%= pid_dir %>
+    chown <%= user %> <%= pid_dir %>
+    
+    echo -n $"Starting $PROG: "
+
+    # bail out if process is already running or lock file remains
+    pid=`pidofproc -p $PIDFILE $PROG`
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo && return 3
+    [ -e $LOCKFILE ] && echo && return 3
+    
+    # all good, run the process command
+    su - <%= user %> -c 'cd <%= engine.root %>; export PORT=<%= port %>; <% engine.env.each_pair do |var,env| %><%= sprintf("%s=\"%s\";", var.upcase, env) %><% end %>\
+            <%= process.command %> >><%= log %>/<%= process_name %>.log 2>&1 & echo $! > <%= File.join(pid_dir, process_name) %>.pid'
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && touch $LOCKFILE
+    [ $RETVAL -eq 0 ] && success $"$PROG startup" || failure $"$PROG startup"
+    echo
+    return $RETVAL
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    echo -n $"Stopping $PROG: "
+    killproc -p $PIDFILE $PROG 
+    RETVAL=$?
+    echo 
+    [ $RETVAL -eq 0 ] && rm -f $LOCKFILE
+    return $RETVAL
+}
+
+#
+# Function that provides status of the daemon/service
+#
+do_status()
+{
+    status -p $PIDFILE -l $PROG $PROG
+    RETVAL=$?
+    return $RETVAL
+}
+
+#
+# Function that restarts the daemon/service
+#
+do_restart()
+{
+    do_stop && sleep 1 && do_start
+}
+
+case "$1" in
+    start)
+        do_start
+    ;;
+    stop)
+        do_stop
+    ;;
+    status)
+        do_status
+    ;;
+    restart|force-reload)
+        do_restart
+    ;;
+    *)
+        echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+        exit 3
+    ;;
+esac

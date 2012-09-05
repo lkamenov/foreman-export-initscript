@@ -11,17 +11,21 @@ class Foreman::Export::Initscript < Foreman::Export::Base
     
     def export
         super
-
+        
         error("Must specify a location") unless location
         
-        Dir["{location}/#{app}*"].each do |file|
+        # clean init script folder
+        Dir["#{location}/#{app}*"].each do |file|
             clean file
         end
-        
+                                
         engine.each_process do |name, process|
             1.upto(engine.formation[name]) do |num|
                 port = engine.port_for(process, num)
-                write_template "initscript/process-script.erb", "#{app}-#{name}-#{num}", binding
+                process_name = "#{app}-#{name}-#{num}"
+                pid_dir = "/var/run/#{app}-#{name}"
+                write_template "initscript/initscript.erb", process_name, binding
+                FileUtils.chmod 0744, File.join(location, process_name)
             end
         end
     end
