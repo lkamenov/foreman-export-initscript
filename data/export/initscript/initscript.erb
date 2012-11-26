@@ -50,7 +50,7 @@ do_start()
     [ -e $LOCKFILE ] && echo && return 3
     
     # all good, run the process command
-    su - <%= user %> -c 'cd <%= engine.root %>; export PORT=<%= port %> <% engine.env.each_pair do |var,env| %><%= sprintf("%s=\"%s\" ", var.upcase, env) %><% end %>\
+    su - <%= user %> -c 'cd <%= engine.root %>; export PORT=<%= port %> <% engine.env.each_pair do |var,env| %><%= sprintf("%s=\"%s\" ", var.upcase, env) %><% end %>;\
             <%= process.command %> >><%= log %>/<%= process_name %>.log 2>&1 & echo $! > <%= File.join(pid_dir, process_name) %>.pid'
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch $LOCKFILE
